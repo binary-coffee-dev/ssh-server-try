@@ -17,3 +17,7 @@ cargo run
 ## License
 
 - [LGPL v2.1](./LICENSE.md)
+
+## Utils
+
+- [Bash prompts](https://tldp.org/HOWTO/Bash-Prompt-HOWTO/index.html)
