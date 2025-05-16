@@ -1,22 +1,35 @@
 use std::collections::HashMap;
+use std::future::Future;
+use std::io::Write;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use russh::keys::ssh_key::rand_core::OsRng;
-use russh::*;
 use russh::keys::{Certificate, PublicKey};
 use russh::server::{Auth, Handler, Msg, Server as _, Session};
+use russh::*;
 use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
+    // Generate or load the private key BEGIN
+    let private_key_file = "./private_key.txt";
+    let private_key ;
+    if std::path::Path::new(private_key_file).exists() {
+        let file = std::path::Path::new(private_key_file);
+        private_key = keys::PrivateKey::from_bytes(std::fs::read(private_key_file).unwrap().as_ref()).unwrap();
+    } else {
+        private_key = keys::PrivateKey::random(&mut OsRng, keys::Algorithm::Ed25519).unwrap();
+        let mut file = std::fs::File::create(private_key_file).unwrap();
+        file.write_all(private_key.to_bytes().unwrap().to_vec().as_ref()).unwrap();
+    }
+    // Generate or load the private key END
+
     let config = server::Config {
         inactivity_timeout: Some(std::time::Duration::from_secs(3600)),
         auth_rejection_time: std::time::Duration::from_secs(3),
         auth_rejection_time_initial: Some(std::time::Duration::from_secs(0)),
-        keys: vec![
-            keys::PrivateKey::random(&mut OsRng, keys::Algorithm::Ed25519).unwrap(),
-        ],
+        keys: vec![private_key],
         preferred: Preferred {
             ..Preferred::default()
         },
@@ -26,7 +39,7 @@ async fn main() {
     let config = Arc::new(config);
     let mut sh = Server {
         clients: Arc::new(Mutex::new(HashMap::new())),
-        id: 0
+        id: 0,
     };
     println!("Starting server...");
     sh.run_on_address(config, ("0.0.0.0", 2222)).await.unwrap();
@@ -40,6 +53,7 @@ struct Server {
 
 impl Server {
     async fn post(&mut self, data: CryptoVec) {
+        // not needed if we don't want to propagate the message to other clients
         let mut clients = self.clients.lock().await;
         for (id, (channel, ref mut s)) in clients.iter_mut() {
             if *id != self.id {
@@ -66,7 +80,11 @@ impl server::Server for Server {
 impl server::Handler for Server {
     type Error = russh::Error;
 
-    async fn channel_open_session(&mut self, channel: Channel<Msg>, session: &mut Session) -> Result<bool, Self::Error> {
+    async fn channel_open_session(
+        &mut self,
+        channel: Channel<Msg>,
+        session: &mut Session,
+    ) -> Result<bool, Self::Error> {
         {
             let mut clients = self.clients.lock().await;
             clients.insert(self.id, (channel.id(), session.handle()));
@@ -74,26 +92,73 @@ impl server::Handler for Server {
         Ok(true)
     }
 
-    async fn auth_publickey(&mut self, _user: &str, _public_key: &PublicKey) -> Result<Auth, Self::Error> {
+    async fn auth_publickey(
+        &mut self,
+        _user: &str,
+        _public_key: &PublicKey,
+    ) -> Result<Auth, Self::Error> {
         Ok(Auth::Accept)
     }
 
-    async fn auth_openssh_certificate(&mut self, _user: &str, _certificate: &Certificate) -> Result<Auth, Self::Error> {
+    async fn auth_openssh_certificate(
+        &mut self,
+        _user: &str,
+        _certificate: &Certificate,
+    ) -> Result<Auth, Self::Error> {
         Ok(Auth::Accept)
     }
 
-    async fn data(&mut self, channel: ChannelId, data: &[u8], session: &mut Session) -> Result<(), Self::Error> {
+    async fn pty_request(
+        &mut self,
+        channel: ChannelId,
+        term: &str,
+        col_width: u32,
+        row_height: u32,
+        pix_width: u32,
+        pix_height: u32,
+        modes: &[(Pty, u32)],
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        println!("PTY");
+        Ok(())
+    }
+
+    async fn window_change_request(
+        &mut self,
+        channel: ChannelId,
+        col_width: u32,
+        row_height: u32,
+        pix_width: u32,
+        pix_height: u32,
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        println!("Window change");
+        Ok(())
+    }
+
+    async fn data(
+        &mut self,
+        channel: ChannelId,
+        data: &[u8],
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
         if data == [3] {
             return Err(Error::Disconnect);
         }
 
         let data = CryptoVec::from(format!("Got data: {}\r\n", String::from_utf8_lossy(data)));
+        // let data = CryptoVec::from("\\033[2J\\033[H");
         self.post(data.clone()).await;
         session.data(channel, data)?;
         Ok(())
     }
 
-    async fn tcpip_forward(&mut self, address: &str, port: &mut u32, session: &mut Session) -> Result<bool, Self::Error> {
+    async fn tcpip_forward(
+        &mut self,
+        address: &str,
+        port: &mut u32,
+        session: &mut Session,
+    ) -> Result<bool, Self::Error> {
         let handle = session.handle();
         let address = address.to_string();
         let port = *port;
