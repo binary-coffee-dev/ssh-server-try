@@ -1,0 +1,7 @@
+[package]
+name = "ssh-server-try"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+russh = "0.52.1"
