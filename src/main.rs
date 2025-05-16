@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::future::Future;
 use std::io::Write;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -10,18 +9,23 @@ use russh::server::{Auth, Handler, Msg, Server as _, Session};
 use russh::*;
 use tokio::sync::Mutex;
 
+mod view;
+use view::*;
+
 #[tokio::main]
 async fn main() {
     // Generate or load the private key BEGIN
     let private_key_file = "./private_key.txt";
-    let private_key ;
+    let private_key;
     if std::path::Path::new(private_key_file).exists() {
-        let file = std::path::Path::new(private_key_file);
-        private_key = keys::PrivateKey::from_bytes(std::fs::read(private_key_file).unwrap().as_ref()).unwrap();
+        private_key =
+            keys::PrivateKey::from_bytes(std::fs::read(private_key_file).unwrap().as_ref())
+                .unwrap();
     } else {
         private_key = keys::PrivateKey::random(&mut OsRng, keys::Algorithm::Ed25519).unwrap();
         let mut file = std::fs::File::create(private_key_file).unwrap();
-        file.write_all(private_key.to_bytes().unwrap().to_vec().as_ref()).unwrap();
+        file.write_all(private_key.to_bytes().unwrap().to_vec().as_ref())
+            .unwrap();
     }
     // Generate or load the private key END
 
@@ -39,6 +43,7 @@ async fn main() {
     let config = Arc::new(config);
     let mut sh = Server {
         clients: Arc::new(Mutex::new(HashMap::new())),
+        view_root: ViewRoot::new(),
         id: 0,
     };
     println!("Starting server...");
@@ -47,7 +52,8 @@ async fn main() {
 
 #[derive(Clone)]
 struct Server {
-    clients: Arc<Mutex<HashMap<usize, (ChannelId, russh::server::Handle)>>>,
+    clients: Arc<Mutex<HashMap<usize, (ChannelId, server::Handle)>>>,
+    view_root: ViewRoot,
     id: usize,
 }
 
@@ -60,6 +66,40 @@ impl Server {
                 let _ = s.data(*channel, data.clone()).await;
             }
         }
+    }
+
+    fn exit_alt_screen(&mut self, channel: ChannelId, session: &mut Session) -> Result<(), Error> {
+        let mut screen = clear_screen!().as_bytes().to_vec();
+        screen.extend_from_slice(exit_alt_screen!().as_bytes());
+        screen.extend_from_slice(move_cursor!().as_bytes());
+        session.data(
+            channel,
+            CryptoVec::from(screen.to_vec()),
+        )?;
+        Ok(())
+    }
+
+    fn draw(&mut self, channel: ChannelId, session: &mut Session, data: Option<&[u8]>) -> Result<(), Error> {
+        // clean the screen and move the cursor to the top left
+        let mut screen = clear_screen!().as_bytes().to_vec();
+        screen.extend_from_slice(move_cursor!().as_bytes());
+        // if let Some(data) = data {
+        //     screen.extend_from_slice(String::from_utf8_lossy(data).as_bytes());
+        // }
+
+        // paint the screen
+        let mut screen_drawed = vec![
+            "@".repeat(self.view_root.details.width as usize);
+            self.view_root.details.height as usize
+        ];
+        self.view_root.draw(&mut screen_drawed, None);
+        // println!("{}", to_screen_text(&screen_drawed));
+        screen.extend_from_slice(to_screen_text(&screen_drawed).as_bytes());
+        screen.extend_from_slice(move_cursor!().as_bytes());
+
+        // self.post(data.clone()).await;
+        session.data(channel, screen.into())?;
+        Ok(())
     }
 }
 
@@ -111,15 +151,21 @@ impl server::Handler for Server {
     async fn pty_request(
         &mut self,
         channel: ChannelId,
-        term: &str,
+        _term: &str,
         col_width: u32,
         row_height: u32,
-        pix_width: u32,
-        pix_height: u32,
-        modes: &[(Pty, u32)],
+        _pix_width: u32,
+        _pix_height: u32,
+        _modes: &[(Pty, u32)],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
         println!("PTY");
+        self.view_root.redimension(col_width, row_height);
+        session.data(
+            channel,
+            CryptoVec::from(enter_alt_screen!().as_bytes().to_vec()),
+        )?;
+        self.draw(channel, session, None);
         Ok(())
     }
 
@@ -128,11 +174,13 @@ impl server::Handler for Server {
         channel: ChannelId,
         col_width: u32,
         row_height: u32,
-        pix_width: u32,
-        pix_height: u32,
+        _pix_width: u32,
+        _pix_height: u32,
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        println!("Window change");
+        // println!("Window change {} {}", col_width, row_height);
+        self.view_root.redimension(col_width, row_height);
+        self.draw(channel, session, None);
         Ok(())
     }
 
@@ -143,34 +191,34 @@ impl server::Handler for Server {
         session: &mut Session,
     ) -> Result<(), Self::Error> {
         if data == [3] {
+            self.exit_alt_screen(channel, session)?;
             return Err(Error::Disconnect);
         }
 
-        let data = CryptoVec::from(format!("Got data: {}\r\n", String::from_utf8_lossy(data)));
-        // let data = CryptoVec::from("\\033[2J\\033[H");
-        self.post(data.clone()).await;
-        session.data(channel, data)?;
+        println!("Data received: {:?}", data);
+
+        self.draw(channel, session, Some(data));
+        // self.draw(channel, session, None);
+
         Ok(())
     }
 
-    async fn tcpip_forward(
+    async fn channel_close(
         &mut self,
-        address: &str,
-        port: &mut u32,
+        channel: ChannelId,
         session: &mut Session,
-    ) -> Result<bool, Self::Error> {
-        let handle = session.handle();
-        let address = address.to_string();
-        let port = *port;
-        tokio::spawn(async move {
-            let channel = handle
-                .channel_open_forwarded_tcpip(address, port, "1.2.3.4", 1234)
-                .await
-                .unwrap();
-            let _ = channel.data(&b"Hello from a forwadded port"[..]).await;
-            let _ = channel.eof().await;
-        });
-        Ok(true)
+    ) -> Result<(), Self::Error> {
+        self.exit_alt_screen(channel, session)?;
+        Ok(())
+    }
+
+    async fn channel_eof(
+        &mut self,
+        channel: ChannelId,
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        self.exit_alt_screen(channel, session)?;
+        Ok(())
     }
 }
 
