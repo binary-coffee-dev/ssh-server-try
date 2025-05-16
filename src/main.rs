@@ -1,3 +1,4 @@
+use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::io::Write;
 use std::net::SocketAddr;
@@ -45,6 +46,7 @@ async fn main() {
         clients: Arc::new(Mutex::new(HashMap::new())),
         view_root: ViewRoot::new(),
         id: 0,
+        cursor_position: (1, 1),
     };
     println!("Starting server...");
     sh.run_on_address(config, ("0.0.0.0", 2222)).await.unwrap();
@@ -55,6 +57,7 @@ struct Server {
     clients: Arc<Mutex<HashMap<usize, (ChannelId, server::Handle)>>>,
     view_root: ViewRoot,
     id: usize,
+    cursor_position: (u32, u32),
 }
 
 impl Server {
@@ -72,30 +75,56 @@ impl Server {
         let mut screen = clear_screen!().as_bytes().to_vec();
         screen.extend_from_slice(exit_alt_screen!().as_bytes());
         screen.extend_from_slice(move_cursor!().as_bytes());
-        session.data(
-            channel,
-            CryptoVec::from(screen.to_vec()),
-        )?;
+        session.data(channel, CryptoVec::from(screen.to_vec()))?;
         Ok(())
     }
 
-    fn draw(&mut self, channel: ChannelId, session: &mut Session, data: Option<&[u8]>) -> Result<(), Error> {
+    fn draw(
+        &mut self,
+        channel: ChannelId,
+        session: &mut Session,
+        data: Option<&[u8]>,
+    ) -> Result<(), Error> {
         // clean the screen and move the cursor to the top left
         let mut screen = clear_screen!().as_bytes().to_vec();
         screen.extend_from_slice(move_cursor!().as_bytes());
         // if let Some(data) = data {
         //     screen.extend_from_slice(String::from_utf8_lossy(data).as_bytes());
         // }
+        if let Some(data) = data {
+            if data == [27, 91, 65] || data == [107] {
+                // up
+                self.cursor_position.0 = max(self.cursor_position.0 - 1, 1);
+            }
+            if data == [27, 91, 66] || data == [106] {
+                // down
+                self.cursor_position.0 =
+                    min(self.cursor_position.0 + 1, self.view_root.details.height);
+            }
+            if data == [27, 91, 68] || data == [104] {
+                // left
+                self.cursor_position.1 =
+                    max(self.cursor_position.1 - 1, 1);
+            }
+            if data == [27, 91, 67] || data == [108] {
+                // right
+                self.cursor_position.1 =
+                    min(self.cursor_position.1 + 1, self.view_root.details.width);
+            }
+        }
+        println!("Cursor position: {:?}", self.cursor_position);
 
         // paint the screen
         let mut screen_drawed = vec![
-            "@".repeat(self.view_root.details.width as usize);
+            " ".repeat(self.view_root.details.width as usize);
             self.view_root.details.height as usize
         ];
         self.view_root.draw(&mut screen_drawed, None);
         // println!("{}", to_screen_text(&screen_drawed));
         screen.extend_from_slice(to_screen_text(&screen_drawed).as_bytes());
-        screen.extend_from_slice(move_cursor!().as_bytes());
+        screen.extend_from_slice(
+            move_cursor!(self.cursor_position.0, self.cursor_position.1).as_bytes(),
+        );
 
         // self.post(data.clone()).await;
         session.data(channel, screen.into())?;
@@ -190,15 +219,14 @@ impl server::Handler for Server {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
+        println!("Data received: {:?}", data);
+
         if data == [3] {
             self.exit_alt_screen(channel, session)?;
             return Err(Error::Disconnect);
         }
 
-        println!("Data received: {:?}", data);
-
         self.draw(channel, session, Some(data));
-        // self.draw(channel, session, None);
 
         Ok(())
     }
