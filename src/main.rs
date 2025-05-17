@@ -12,6 +12,8 @@ use tokio::sync::Mutex;
 
 mod view;
 use view::*;
+use view::view_trait::ViewTrait;
+use view::view_root::ViewRoot;
 
 #[tokio::main]
 async fn main() {
