@@ -1387,6 +1387,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssh-bc-server"
+version = "0.1.0"
+dependencies = [
+ "rand_core 0.9.3",
+ "russh",
+ "tokio",
+]
+
+[[package]]
 name = "ssh-cipher"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1413,15 +1422,6 @@ dependencies = [
  "bytes",
  "pem-rfc7468",
  "sha2",
-]
-
-[[package]]
-name = "ssh-server-try"
-version = "0.1.0"
-dependencies = [
- "rand_core 0.9.3",
- "russh",
- "tokio",
 ]
 
 [[package]]
