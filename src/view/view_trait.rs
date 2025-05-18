@@ -1,3 +1,4 @@
+use crate::view::actions::Action;
 use crate::view::view_details::ViewDetails;
 
 pub trait ViewTraitClone {
@@ -16,6 +17,10 @@ where
 pub trait ViewTrait: ViewTraitClone + Send {
     fn draw(&self, screen: &mut Vec<String>, parent_details: Option<ViewDetails>);
     fn redimension(&mut self, width: u32, height: u32);
+    fn event(&mut self, _action: &Action) {}
+    fn cursor_position(&self, _parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {
+        None
+    }
 }
 
 impl Clone for Box<dyn ViewTrait> {

@@ -1,4 +1,3 @@
-use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::env;
 use std::io::Write;
@@ -13,6 +12,7 @@ use russh::*;
 use tokio::sync::Mutex;
 
 mod view;
+use crate::view::actions::{map_key, Action};
 use view::view_root::ViewRoot;
 use view::view_trait::ViewTrait;
 use view::*;
@@ -53,7 +53,6 @@ async fn main() {
         clients: Arc::new(Mutex::new(HashMap::new())),
         view_root: ViewRoot::new(),
         id: 0,
-        cursor_position: (1, 1),
     };
     println!("Starting server...");
     sh.run_on_address(config, ("0.0.0.0", 2222)).await.unwrap();
@@ -64,11 +63,10 @@ struct Server {
     clients: Arc<Mutex<HashMap<usize, (ChannelId, server::Handle)>>>,
     view_root: ViewRoot,
     id: usize,
-    cursor_position: (u32, u32),
 }
 
 impl Server {
-    async fn post(&mut self, data: CryptoVec) {
+    async fn _post(&mut self, data: CryptoVec) {
         // not needed if we don't want to propagate the message to other clients
         let mut clients = self.clients.lock().await;
         for (id, (channel, ref mut s)) in clients.iter_mut() {
@@ -90,35 +88,18 @@ impl Server {
         &mut self,
         channel: ChannelId,
         session: &mut Session,
-        data: Option<&[u8]>,
+        action: Option<Action>,
     ) -> Result<(), Error> {
         // clean the screen and move the cursor to the top left
         let mut screen = clear_screen!().as_bytes().to_vec();
         screen.extend_from_slice(move_cursor!().as_bytes());
-        // if let Some(data) = data {
-        //     screen.extend_from_slice(String::from_utf8_lossy(data).as_bytes());
-        // }
-        if let Some(data) = data {
-            if data == [27, 91, 65] || data == [107] {
-                // up
-                self.cursor_position.0 = max(self.cursor_position.0 - 1, 1);
+
+        match action {
+            Some(act) => {
+                self.view_root.event(&act);
             }
-            if data == [27, 91, 66] || data == [106] {
-                // down
-                self.cursor_position.0 =
-                    min(self.cursor_position.0 + 1, self.view_root.details.height);
-            }
-            if data == [27, 91, 68] || data == [104] {
-                // left
-                self.cursor_position.1 = max(self.cursor_position.1 - 1, 1);
-            }
-            if data == [27, 91, 67] || data == [108] {
-                // right
-                self.cursor_position.1 =
-                    min(self.cursor_position.1 + 1, self.view_root.details.width);
-            }
+            None => {}
         }
-        println!("Cursor position: {:?}", self.cursor_position);
 
         // paint the screen
         let mut screen_drawed = vec![
@@ -126,11 +107,12 @@ impl Server {
             self.view_root.details.height as usize
         ];
         self.view_root.draw(&mut screen_drawed, None);
-        // println!("{}", to_screen_text(&screen_drawed));
         screen.extend_from_slice(to_screen_text(&screen_drawed).as_bytes());
-        screen.extend_from_slice(
-            move_cursor!(self.cursor_position.0, self.cursor_position.1).as_bytes(),
-        );
+
+        // set the cursor position
+        let cursor_pos = self.view_root.cursor_position(None).unwrap_or((1, 1));
+        println!("Cursor position: {:?}", cursor_pos);
+        screen.extend_from_slice(move_cursor!(cursor_pos.0, cursor_pos.1).as_bytes());
 
         // self.post(data.clone()).await;
         session.data(channel, screen.into())?;
@@ -225,12 +207,16 @@ impl server::Handler for Server {
     ) -> Result<(), Self::Error> {
         println!("Data received: {:?}", data);
 
-        if data == [3] || data == [4] {
-            self.exit_alt_screen(channel, session)?;
-            return Err(Error::Disconnect);
+        let action = map_key(data);
+        match action {
+            Some(Action::Eof) | Some(Action::Sigint) => {
+                self.exit_alt_screen(channel, session)?;
+                return Err(Error::Disconnect);
+            }
+            _ => {}
         }
 
-        self.draw(channel, session, Some(data))
+        self.draw(channel, session, action)
     }
 
     async fn channel_close(

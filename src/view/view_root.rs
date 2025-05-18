@@ -1,3 +1,4 @@
+use crate::view::actions::Action;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_list::ViewList;
 use crate::view::view_trait::ViewTrait;
@@ -11,7 +12,8 @@ pub struct ViewRoot {
 
 impl ViewRoot {
     pub fn new() -> Self {
-        let initial_view = Box::new(ViewList::new(0, 0, 80, 24));
+        let mut initial_view = Box::new(ViewList::new(0, 0, 80, 24));
+        initial_view.details.focus = true;
         ViewRoot {
             children: vec![
                 initial_view.clone(),
@@ -34,6 +36,15 @@ impl ViewTrait for ViewRoot {
         for child in &self.children {
             child.draw(screen, Some(self.details.clone()));
         }
+    }
+
+    fn event(&mut self, action: &Action) {
+        println!("Event (view_root): {:?}", action);
+        self.current_view.event(action);
+    }
+
+    fn cursor_position(&self, _parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {
+        self.current_view.cursor_position(Some(self.details.clone()))
     }
 
     fn redimension(&mut self, width: u32, height: u32) {
