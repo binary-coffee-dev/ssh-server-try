@@ -16,6 +16,8 @@ impl ViewText {
                 height: 1,
                 row,
                 col,
+                focus: false,
+                can_focus: false,
             },
             text,
         }

@@ -2,6 +2,7 @@ pub mod view_details;
 pub mod view_trait;
 pub mod view_root;
 pub mod view_text;
+pub mod view_list;
 
 use std::cmp::min;
 use crate::view::view_details::ViewDetails;

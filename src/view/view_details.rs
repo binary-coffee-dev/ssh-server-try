@@ -4,4 +4,6 @@ pub struct ViewDetails {
     pub height: u32,
     pub row: u32,
     pub col: u32,
+    pub focus: bool,
+    pub can_focus: bool,
 }
