@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  deploy:
+    build:
+      context: .
+    restart: always
+    environment:
+      - BC_PRIVATE_KEY=/cert/private_key.pem
+    volumes:
+      - ${BC_PRIVATE_KEY_PATH}:/cert
+    ports:
+      - "127.0.0.1:2222:2222"

@@ -1,33 +1,38 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
+use std::env;
 use std::io::Write;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use russh::keys::ssh_key::rand_core::OsRng;
+use russh::keys::ssh_key::LineEnding::LF;
 use russh::keys::{Certificate, PublicKey};
 use russh::server::{Auth, Handler, Msg, Server as _, Session};
 use russh::*;
 use tokio::sync::Mutex;
 
 mod view;
-use view::*;
-use view::view_trait::ViewTrait;
 use view::view_root::ViewRoot;
+use view::view_trait::ViewTrait;
+use view::*;
 
 #[tokio::main]
 async fn main() {
     // Generate or load the private key BEGIN
-    let private_key_file = "./private_key.txt";
+    let private_key_file = env::var("BC_PRIVATE_KEY")
+        .map_or("./cert/private_key.pem".to_string(), |v| {
+            String::from(v.as_str())
+        });
+    println!("Private key file: {}", private_key_file);
     let private_key;
-    if std::path::Path::new(private_key_file).exists() {
+    if std::path::Path::new(private_key_file.as_str()).exists() {
         private_key =
-            keys::PrivateKey::from_bytes(std::fs::read(private_key_file).unwrap().as_ref())
-                .unwrap();
+            keys::PrivateKey::from_openssh(std::fs::read(private_key_file).unwrap()).unwrap();
     } else {
         private_key = keys::PrivateKey::random(&mut OsRng, keys::Algorithm::Ed25519).unwrap();
         let mut file = std::fs::File::create(private_key_file).unwrap();
-        file.write_all(private_key.to_bytes().unwrap().to_vec().as_ref())
+        file.write_all(private_key.to_openssh(LF).unwrap().as_str().as_bytes())
             .unwrap();
     }
     // Generate or load the private key END
@@ -105,8 +110,7 @@ impl Server {
             }
             if data == [27, 91, 68] || data == [104] {
                 // left
-                self.cursor_position.1 =
-                    max(self.cursor_position.1 - 1, 1);
+                self.cursor_position.1 = max(self.cursor_position.1 - 1, 1);
             }
             if data == [27, 91, 67] || data == [108] {
                 // right
