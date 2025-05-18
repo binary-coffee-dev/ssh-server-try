@@ -24,7 +24,6 @@ async fn main() {
         .map_or("./cert/private_key.pem".to_string(), |v| {
             String::from(v.as_str())
         });
-    println!("Private key file: {}", private_key_file);
     let private_key;
     if std::path::Path::new(private_key_file.as_str()).exists() {
         private_key =
@@ -111,7 +110,6 @@ impl Server {
 
         // set the cursor position
         let cursor_pos = self.view_root.cursor_position(None).unwrap_or((1, 1));
-        println!("Cursor position: {:?}", cursor_pos);
         screen.extend_from_slice(move_cursor!(cursor_pos.0, cursor_pos.1).as_bytes());
 
         // self.post(data.clone()).await;

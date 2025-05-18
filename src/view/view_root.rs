@@ -39,7 +39,6 @@ impl ViewTrait for ViewRoot {
     }
 
     fn event(&mut self, action: &Action) {
-        println!("Event (view_root): {:?}", action);
         self.current_view.event(action);
     }
 

@@ -42,7 +42,6 @@ impl ViewTrait for ViewList {
     }
 
     fn event(&mut self, action: &Action) {
-        println!("Event (view_list): {:?}", action);
         if self.details.focus {
             match action {
                 Action::Up => {
