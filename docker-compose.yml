@@ -2,6 +2,7 @@ version: "3"
 
 services:
   deploy:
+    container_name: "bc-ssh-server"
     build:
       context: .
     restart: always
