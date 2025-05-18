@@ -14,7 +14,7 @@ macro_rules! move_cursor {
         format!("\x1B[{};{}H", $a, $b)
     };
     () => {
-        format!("\x1B[0;0H")
+        format!("\x1B[1;1H")
     };
 }
 #[macro_export]
