@@ -200,8 +200,7 @@ impl server::Handler for Server {
             channel,
             CryptoVec::from(enter_alt_screen!().as_bytes().to_vec()),
         )?;
-        self.draw(channel, session, None);
-        Ok(())
+        self.draw(channel, session, None)
     }
 
     async fn window_change_request(
@@ -215,8 +214,7 @@ impl server::Handler for Server {
     ) -> Result<(), Self::Error> {
         // println!("Window change {} {}", col_width, row_height);
         self.view_root.redimension(col_width, row_height);
-        self.draw(channel, session, None);
-        Ok(())
+        self.draw(channel, session, None)
     }
 
     async fn data(
@@ -227,14 +225,12 @@ impl server::Handler for Server {
     ) -> Result<(), Self::Error> {
         println!("Data received: {:?}", data);
 
-        if data == [3] {
+        if data == [3] || data == [4] {
             self.exit_alt_screen(channel, session)?;
             return Err(Error::Disconnect);
         }
 
-        self.draw(channel, session, Some(data));
-
-        Ok(())
+        self.draw(channel, session, Some(data))
     }
 
     async fn channel_close(

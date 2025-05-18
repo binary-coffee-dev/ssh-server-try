@@ -29,18 +29,12 @@ impl ViewTrait for ViewText {
         let row = self.details.row as usize + parent_details.clone().map_or(0, |d| d.row as usize);
         let col = self.details.col as usize + parent_details.clone().map_or(0, |d| d.col as usize);
 
-        let prow = parent_details
-            .clone()
-            .map_or(self.details.row as usize, |d| d.row as usize);
         let pcol = parent_details
             .clone()
             .map_or(self.details.col as usize, |d| d.col as usize);
         let pw = parent_details
             .clone()
             .map_or(self.details.width as usize, |d| d.width as usize);
-        let ph = parent_details
-            .clone()
-            .map_or(self.details.height as usize, |d| d.height as usize);
 
         if row < screen.len() && col < screen[row].len() {
             let line = &mut screen[row];

@@ -1,4 +1,3 @@
-use std::cmp::min;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_text::ViewText;
 use crate::view::view_trait::ViewTrait;
@@ -33,7 +32,7 @@ impl ViewList {
 }
 
 impl ViewTrait for ViewList {
-    fn draw(&self, screen: &mut Vec<String>, parent_details: Option<ViewDetails>) {
+    fn draw(&self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
         for child in &self.children {
             child.draw(screen, Some(self.details.clone()));
         }
