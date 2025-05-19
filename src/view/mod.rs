@@ -6,6 +6,7 @@ pub mod view_article;
 pub mod view_details;
 pub mod view_list;
 pub mod view_list_item;
+pub mod view_text;
 pub mod view_root;
 pub mod view_trait;
 

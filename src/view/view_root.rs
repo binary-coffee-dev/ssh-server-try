@@ -28,7 +28,6 @@ impl ViewRoot {
     pub fn change_page(&mut self, page: Page) {
         match page {
             Page::Article(name) => {
-                println!("change page: {}", name);
                 self.current_view = Box::new(ViewArticle::new(
                     self.details.row,
                     self.details.col,

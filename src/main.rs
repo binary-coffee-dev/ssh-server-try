@@ -207,7 +207,7 @@ impl server::Handler for Server {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        println!("Data received: {:?}", data);
+        // println!("Data received: {:?}", data);
 
         let action = map_key(data);
         match action {

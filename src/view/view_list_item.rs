@@ -62,9 +62,4 @@ impl ViewTrait for ViewListItem {
     fn post_operations(&mut self, _parent_details: Option<ViewDetails>) -> Vec<PostOperation> {
         vec![Underline(self.details.row, self.col, self.col_end)]
     }
-
-    fn redimension(&mut self, width: u32, height: u32) {
-        self.details.width = width;
-        self.details.height = height;
-    }
 }
