@@ -13,6 +13,7 @@ use tokio::sync::Mutex;
 
 mod view;
 use crate::view::actions::{map_key, Action};
+use crate::view::view_trait::EventResult;
 use view::view_root::ViewRoot;
 use view::view_trait::ViewTrait;
 use view::*;
@@ -75,12 +76,18 @@ impl Server {
         }
     }
 
-    fn exit_alt_screen(&mut self, channel: ChannelId, session: &mut Session) -> Result<(), Error> {
-        let mut screen = clear_screen!().as_bytes().to_vec();
-        screen.extend_from_slice(exit_alt_screen!().as_bytes());
-        screen.extend_from_slice(move_cursor!().as_bytes());
-        session.data(channel, CryptoVec::from(screen.to_vec()))?;
-        Ok(())
+    async fn close_action(&mut self) {
+        // not needed if we don't want to propagate the message to other clients
+        let mut clients = self.clients.lock().await;
+        for (id, (channel, ref mut s)) in clients.iter_mut() {
+            if *id == self.id {
+                let mut screen = clear_screen!().as_str().to_string();
+                screen.push_str(exit_alt_screen!().as_str());
+                screen.push_str(move_cursor!().as_str());
+                _ = s.data(*channel, CryptoVec::from(screen));
+                break;
+            }
+        }
     }
 
     fn draw(
@@ -94,9 +101,12 @@ impl Server {
         screen.push_str(move_cursor!().as_str());
 
         match action {
-            Some(act) => {
-                self.view_root.event(&act);
-            }
+            Some(act) => match self.view_root.event(&act) {
+                Some(EventResult::Quite) => {
+                    return Err(Error::Disconnect);
+                }
+                _ => {}
+            },
             None => {}
         }
 
@@ -133,6 +143,7 @@ impl server::Server for Server {
 
     fn handle_session_error(&mut self, _error: <Self::Handler as Handler>::Error) {
         eprintln!("Session error: {:?}", _error);
+        _ = self.close_action();
     }
 }
 
@@ -196,7 +207,6 @@ impl server::Handler for Server {
         _pix_height: u32,
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        // println!("Window change {} {}", col_width, row_height);
         self.view_root.redimension(col_width, row_height);
         self.draw(channel, session, None)
     }
@@ -207,12 +217,11 @@ impl server::Handler for Server {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        // println!("Data received: {:?}", data);
+        println!("Data received: {:?}", data);
 
         let action = map_key(data);
         match action {
-            Some(Action::Eof) | Some(Action::Sigint) => {
-                self.exit_alt_screen(channel, session)?;
+            Some(Action::Eof) => {
                 return Err(Error::Disconnect);
             }
             _ => {}
@@ -220,28 +229,11 @@ impl server::Handler for Server {
 
         self.draw(channel, session, action)
     }
-
-    async fn channel_close(
-        &mut self,
-        channel: ChannelId,
-        session: &mut Session,
-    ) -> Result<(), Self::Error> {
-        self.exit_alt_screen(channel, session)?;
-        Ok(())
-    }
-
-    async fn channel_eof(
-        &mut self,
-        channel: ChannelId,
-        session: &mut Session,
-    ) -> Result<(), Self::Error> {
-        self.exit_alt_screen(channel, session)?;
-        Ok(())
-    }
 }
 
 impl Drop for Server {
     fn drop(&mut self) {
+        _ = self.close_action();
         let id = self.id;
         let clients = self.clients.clone();
         tokio::spawn(async move {

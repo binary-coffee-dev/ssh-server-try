@@ -48,7 +48,7 @@ impl ViewTrait for ViewArticle {
 
     fn event(&mut self, action: &Action) -> Option<EventResult> {
         match action {
-            Action::Esc => Some(EventResult::ChangePage(Page::List)),
+            Action::Esc | Action::Sigint => Some(EventResult::ChangePage(Page::List)),
             _ => None,
         }
     }

@@ -88,6 +88,9 @@ impl ViewTrait for ViewList {
                         Page::Article(item_value),
                     ));
                 }
+                Action::Esc | Action::Sigint => {
+                    return Some(EventResult::Quite);
+                }
                 _ => {
                     None
                 }

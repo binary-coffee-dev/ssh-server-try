@@ -25,6 +25,7 @@ pub enum Page {
 
 pub enum EventResult {
     ChangePage(Page),
+    Quite,
 }
 
 pub trait ViewTrait: ViewTraitClone + Send {

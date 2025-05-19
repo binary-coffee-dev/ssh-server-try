@@ -49,14 +49,16 @@ impl ViewTrait for ViewRoot {
     }
 
     fn event(&mut self, action: &Action) -> Option<EventResult> {
-        match self.current_view.event(action) {
+        let result = self.current_view.event(action);
+        match result {
             Some(EventResult::ChangePage(page)) => {
                 self.change_page(page);
+                None
             }
-            _ => {}
+            _ => {
+                result
+            }
         }
-
-        None
     }
 
     fn cursor_position(&self, _parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {
