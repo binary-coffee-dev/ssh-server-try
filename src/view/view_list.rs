@@ -32,13 +32,13 @@ impl ViewList {
 impl ViewTrait for ViewList {
     fn draw(&mut self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
         if self.items.is_empty() {
+            // load the list of posts from the API
             let handle = thread::spawn(|| {
                 let rt = Runtime::new().unwrap();
                 rt.block_on(get_posts())
             });
 
             let result = handle.join().unwrap().unwrap();
-            println!("View list is empty.");
             let mut count = 0;
             for post in result["data"]["posts"]["data"].as_array().unwrap() {
                 self.items.push(Box::new(ViewText::new(
@@ -46,6 +46,7 @@ impl ViewTrait for ViewList {
                     count,
                     0,
                 )));
+                println!("{:?}", post["attributes"]["title"].as_str());
                 count += 1;
             }
         }

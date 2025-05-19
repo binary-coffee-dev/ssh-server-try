@@ -90,8 +90,8 @@ impl Server {
         action: Option<Action>,
     ) -> Result<(), Error> {
         // clean the screen and move the cursor to the top left
-        let mut screen = clear_screen!().as_bytes().to_vec();
-        screen.extend_from_slice(move_cursor!().as_bytes());
+        let mut screen = clear_screen!().to_string();
+        screen.push_str(move_cursor!().as_str());
 
         match action {
             Some(act) => {
@@ -101,19 +101,19 @@ impl Server {
         }
 
         // paint the screen
-        let mut screen_drawed = vec![
+        let mut screen_drawed = vec!(
             " ".repeat(self.view_root.details.width as usize);
             self.view_root.details.height as usize
-        ];
+        );
         self.view_root.draw(&mut screen_drawed, None);
-        screen.extend_from_slice(to_screen_text(&screen_drawed).as_bytes());
+        screen.push_str(to_screen_text(&screen_drawed).as_str());
 
         // set the cursor position
         let cursor_pos = self.view_root.cursor_position(None).unwrap_or((1, 1));
-        screen.extend_from_slice(move_cursor!(cursor_pos.0, cursor_pos.1).as_bytes());
+        screen.push_str(move_cursor!(cursor_pos.0, cursor_pos.1).as_str());
 
         // self.post(data.clone()).await;
-        session.data(channel, screen.into())?;
+        session.data(channel, screen.as_bytes().into())?;
         Ok(())
     }
 }

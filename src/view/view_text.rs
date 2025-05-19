@@ -1,6 +1,6 @@
-use std::cmp::min;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_trait::ViewTrait;
+use std::cmp::min;
 
 #[derive(Clone)]
 pub struct ViewText {
@@ -12,7 +12,7 @@ impl ViewText {
     pub fn new(text: String, row: u32, col: u32) -> Self {
         ViewText {
             details: ViewDetails {
-                width: text.len() as u32,
+                width: text.chars().count() as u32,
                 height: 1,
                 row,
                 col,
@@ -36,10 +36,17 @@ impl ViewTrait for ViewText {
             .clone()
             .map_or(self.details.width as usize, |d| d.width as usize);
 
-        if row < screen.len() && col < screen[row].len() {
-            let line = &mut screen[row];
-            let w = min(col + self.details.width as usize, pcol + pw as usize);
-            line.replace_range(col..w as usize, &self.text[col..w as usize]);
+        if row < screen.len() && col < screen[row].chars().count() {
+            let mut line: Vec<char> = screen[row].chars().collect();
+            let text: Vec<char> = self.text.chars().collect();
+            let w = min(
+                col + self.details.width as usize,
+                min(pcol + pw, line.len()),
+            );
+            for i in 0..(w - col) {
+                line[col + i] = text[i];
+            }
+            screen[row] = line.into_iter().collect();
         }
     }
 
