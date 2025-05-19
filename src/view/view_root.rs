@@ -15,9 +15,7 @@ impl ViewRoot {
         let mut initial_view = Box::new(ViewList::new(0, 0, 80, 24));
         initial_view.details.focus = true;
         ViewRoot {
-            children: vec![
-                initial_view.clone(),
-            ],
+            children: vec![initial_view.clone()],
             current_view: initial_view,
             details: ViewDetails {
                 width: 80,
@@ -32,10 +30,8 @@ impl ViewRoot {
 }
 
 impl ViewTrait for ViewRoot {
-    fn draw(&self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
-        for child in &self.children {
-            child.draw(screen, Some(self.details.clone()));
-        }
+    fn draw(&mut self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
+        self.current_view.draw(screen, Some(self.details.clone()));
     }
 
     fn event(&mut self, action: &Action) {
@@ -43,7 +39,8 @@ impl ViewTrait for ViewRoot {
     }
 
     fn cursor_position(&self, _parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {
-        self.current_view.cursor_position(Some(self.details.clone()))
+        self.current_view
+            .cursor_position(Some(self.details.clone()))
     }
 
     fn redimension(&mut self, width: u32, height: u32) {

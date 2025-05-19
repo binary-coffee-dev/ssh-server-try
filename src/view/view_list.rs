@@ -1,7 +1,10 @@
 use crate::view::actions::Action;
+use crate::view::api_client::get_posts;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_text::ViewText;
 use crate::view::view_trait::ViewTrait;
+use std::thread;
+use tokio::runtime::Runtime;
 
 #[derive(Clone)]
 pub struct ViewList {
@@ -21,22 +24,33 @@ impl ViewList {
                 can_focus: true,
             },
             selected_index: 0,
-            items: vec![
-                Box::new(ViewText::new("BinaryCoffee".to_string(), 0, 0)),
-                Box::new(ViewText::new(
-                    "This is a test asdf asdf asdf asdf asdf asdfasd fasd fsa".to_string(),
-                    1,
-                    0,
-                )),
-                Box::new(ViewText::new("Another line".to_string(), 2, 0)),
-            ],
+            items: vec![],
         }
     }
 }
 
 impl ViewTrait for ViewList {
-    fn draw(&self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
-        for child in &self.items {
+    fn draw(&mut self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
+        if self.items.is_empty() {
+            let handle = thread::spawn(|| {
+                let rt = Runtime::new().unwrap();
+                rt.block_on(get_posts())
+            });
+
+            let result = handle.join().unwrap().unwrap();
+            println!("View list is empty.");
+            let mut count = 0;
+            for post in result["data"]["posts"]["data"].as_array().unwrap() {
+                self.items.push(Box::new(ViewText::new(
+                    post["attributes"]["title"].as_str().unwrap().to_string(),
+                    count,
+                    0,
+                )));
+                count += 1;
+            }
+        }
+
+        for child in &mut self.items {
             child.draw(screen, Some(self.details.clone()));
         }
     }
@@ -50,7 +64,7 @@ impl ViewTrait for ViewList {
                     }
                 }
                 Action::Down => {
-                    if self.selected_index < self.items.len() - 1 {
+                    if self.items.len() > 0 && self.selected_index < self.items.len() - 1 {
                         self.selected_index = self.selected_index + 1;
                     }
                 }

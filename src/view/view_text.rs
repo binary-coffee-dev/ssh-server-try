@@ -25,7 +25,7 @@ impl ViewText {
 }
 
 impl ViewTrait for ViewText {
-    fn draw(&self, screen: &mut Vec<String>, parent_details: Option<ViewDetails>) {
+    fn draw(&mut self, screen: &mut Vec<String>, parent_details: Option<ViewDetails>) {
         let row = self.details.row as usize + parent_details.clone().map_or(0, |d| d.row as usize);
         let col = self.details.col as usize + parent_details.clone().map_or(0, |d| d.col as usize);
 

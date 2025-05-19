@@ -4,6 +4,7 @@ pub mod view_root;
 pub mod view_text;
 pub mod view_list;
 pub mod actions;
+mod api_client;
 
 // ANSI escape codes BEGIN
 #[macro_export]
