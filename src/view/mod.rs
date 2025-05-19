@@ -1,11 +1,13 @@
-pub mod view_details;
-pub mod view_trait;
-pub mod view_root;
-pub mod view_text;
-pub mod view_list;
-pub mod view_article;
+use crate::view::view_trait::PostOperation;
+
 pub mod actions;
 mod api_client;
+pub mod view_article;
+pub mod view_details;
+pub mod view_list;
+pub mod view_list_item;
+pub mod view_root;
+pub mod view_trait;
 
 // ANSI escape codes BEGIN
 #[macro_export]
@@ -35,13 +37,54 @@ macro_rules! exit_alt_screen {
         format!("\x1B[?1049l")
     };
 }
+#[macro_export]
+macro_rules! underline_begin {
+    () => {
+        format!("\x1b[4m")
+    };
+}
+#[macro_export]
+macro_rules! underline_end {
+    () => {
+        format!("\x1b[24m")
+    };
+}
 // ANSI escape codes END
 
-pub fn to_screen_text(screen_vec: &Vec<String>) -> String {
+pub fn to_screen_text(screen_vec: &Vec<String>, operations: Vec<PostOperation>) -> String {
     let mut screen = String::new();
+    let mut row = 0;
     for line in screen_vec {
-        screen.push_str(line);
+        let mut col = 0;
+        let mut operation_started = false;
+        for c in line.chars() {
+            // apply operations
+            for op in &operations {
+                match op {
+                    PostOperation::Underline(r, c, c_e) => {
+                        if *r == row && *c == col {
+                            println!("Underline operation started at row: {}, col: {}", row, col);
+                            screen.push_str(underline_begin!().as_str());
+                            operation_started = true;
+                        } else if operation_started && *r == row && *c_e == col {
+                            println!("Underline operation ended at row: {}, col: {}", row, col);
+                            screen.push_str(underline_end!().as_str());
+                            operation_started = false;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            
+            screen.push(c);
+            col += 1;
+        }
+        if operation_started {
+            // check if the operation is Underline
+            screen.push_str(underline_end!().as_str());
+        }
+        
+        row += 1;
     }
     screen
 }
-

@@ -1,8 +1,8 @@
 use crate::view::actions::Action;
 use crate::view::api_client::get_posts;
 use crate::view::view_details::ViewDetails;
-use crate::view::view_text::ViewText;
-use crate::view::view_trait::ViewTrait;
+use crate::view::view_list_item::ViewListItem;
+use crate::view::view_trait::{PostOperation, ViewTrait};
 use std::thread;
 use tokio::runtime::Runtime;
 
@@ -41,10 +41,11 @@ impl ViewTrait for ViewList {
             let result = handle.join().unwrap().unwrap();
             let mut count = 0;
             for post in result["data"]["posts"]["data"].as_array().unwrap() {
-                self.items.push(Box::new(ViewText::new(
+                self.items.push(Box::new(ViewListItem::new(
                     post["attributes"]["title"].as_str().unwrap().to_string(),
                     count,
                     0,
+                    count == self.selected_index as u32,
                 )));
                 // println!("{:?}", post["attributes"]["title"].as_str());
                 count += 1;
@@ -54,6 +55,16 @@ impl ViewTrait for ViewList {
         for child in &mut self.items {
             child.draw(screen, Some(self.details.clone()));
         }
+    }
+
+    fn post_operations(&mut self, parent_details: Option<ViewDetails>) -> Vec<PostOperation> {
+        // calculate boundaries is missing
+        let details_inhered = ViewDetails {
+            row: self.details.row + parent_details.as_ref().unwrap().row,
+            col: self.details.col + parent_details.as_ref().unwrap().col,
+            ..self.details.clone()
+        };
+        self.items[self.selected_index].post_operations(Some(details_inhered))
     }
 
     fn event(&mut self, action: &Action) {

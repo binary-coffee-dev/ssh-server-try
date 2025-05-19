@@ -1,7 +1,7 @@
 use crate::view::actions::Action;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_list::ViewList;
-use crate::view::view_trait::ViewTrait;
+use crate::view::view_trait::{PostOperation, ViewTrait};
 
 #[derive(Clone)]
 pub struct ViewRoot {
@@ -41,6 +41,10 @@ impl ViewTrait for ViewRoot {
     fn cursor_position(&self, _parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {
         self.current_view
             .cursor_position(Some(self.details.clone()))
+    }
+
+    fn post_operations(&mut self, parent_details: Option<ViewDetails>) -> Vec<PostOperation> {
+        self.current_view.post_operations(Some(self.details.clone()))
     }
 
     fn redimension(&mut self, width: u32, height: u32) {

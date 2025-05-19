@@ -101,12 +101,18 @@ impl Server {
         }
 
         // paint the screen
-        let mut screen_drawed = vec!(
+        let mut screen_drawed = vec![
             " ".repeat(self.view_root.details.width as usize);
             self.view_root.details.height as usize
-        );
+        ];
         self.view_root.draw(&mut screen_drawed, None);
-        screen.push_str(to_screen_text(&screen_drawed).as_str());
+
+        // post operations
+        let operations = self.view_root.post_operations(None);
+        println!("Post operations: {:?}", operations.len());
+
+        // apply the operations and draw the screen
+        screen.push_str(to_screen_text(&screen_drawed, operations).as_str());
 
         // set the cursor position
         let cursor_pos = self.view_root.cursor_position(None).unwrap_or((1, 1));
