@@ -46,7 +46,7 @@ impl ViewTrait for ViewList {
                     count,
                     0,
                 )));
-                // println!("{:?}", post["attributes"]["title"].as_str());
+                println!("{:?}", post["attributes"]["title"].as_str());
                 count += 1;
             }
         }

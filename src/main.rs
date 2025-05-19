@@ -112,7 +112,6 @@ impl Server {
         let cursor_pos = self.view_root.cursor_position(None).unwrap_or((1, 1));
         screen.push_str(move_cursor!(cursor_pos.0, cursor_pos.1).as_str());
 
-        // self.post(data.clone()).await;
         session.data(channel, screen.as_bytes().into())?;
         Ok(())
     }
@@ -203,7 +202,7 @@ impl server::Handler for Server {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        println!("Data received: {:?}", data);
+        // println!("Data received: {:?}", data);
 
         let action = map_key(data);
         match action {
