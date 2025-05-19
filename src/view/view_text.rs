@@ -1,6 +1,5 @@
 use crate::view::view_details::ViewDetails;
-use crate::view::view_trait::PostOperation::Underline;
-use crate::view::view_trait::{PostOperation, ViewTrait};
+use crate::view::view_trait::ViewTrait;
 use std::cmp::min;
 
 #[derive(Clone)]
@@ -48,7 +47,7 @@ impl ViewTrait for ViewText {
         let text: Vec<char> = self.text.chars().collect();
         let mut text_it = 0;
         for j in 0..(h - row) {
-            if (text_it >= text.len()) {
+            if text_it >= text.len() {
                 break;
             }
 
@@ -60,7 +59,7 @@ impl ViewTrait for ViewText {
                 );
 
                 for i in 0..(w - col) {
-                    if (text_it >= text.len()) {
+                    if text_it >= text.len() {
                         break;
                     }
 
