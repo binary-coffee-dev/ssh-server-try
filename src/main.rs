@@ -109,7 +109,6 @@ impl Server {
 
         // post operations
         let operations = self.view_root.post_operations(None);
-        println!("Post operations: {:?}", operations.len());
 
         // apply the operations and draw the screen
         screen.push_str(to_screen_text(&screen_drawed, operations).as_str());
@@ -208,7 +207,7 @@ impl server::Handler for Server {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        // println!("Data received: {:?}", data);
+        println!("Data received: {:?}", data);
 
         let action = map_key(data);
         match action {

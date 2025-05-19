@@ -7,13 +7,13 @@ use std::cmp::min;
 pub struct ViewListItem {
     pub details: ViewDetails,
     pub text: String,
-    pub selected: bool,
     pub col: u32,
     pub col_end: u32,
+    pub value: String,
 }
 
 impl ViewListItem {
-    pub fn new(text: String, row: u32, col: u32, selected: bool) -> Self {
+    pub fn new(text: String, row: u32, col: u32, value: String) -> Self {
         ViewListItem {
             details: ViewDetails {
                 width: text.chars().count() as u32,
@@ -24,9 +24,9 @@ impl ViewListItem {
                 can_focus: false,
             },
             text: text.clone(),
-            selected,
             col,
             col_end: col + text.chars().count() as u32,
+            value,
         }
     }
 }
@@ -59,7 +59,7 @@ impl ViewTrait for ViewListItem {
         }
     }
 
-    fn post_operations(&mut self, parent_details: Option<ViewDetails>) -> Vec<PostOperation> {
+    fn post_operations(&mut self, _parent_details: Option<ViewDetails>) -> Vec<PostOperation> {
         vec![Underline(self.details.row, self.col, self.col_end)]
     }
 

@@ -63,16 +63,13 @@ pub fn to_screen_text(screen_vec: &Vec<String>, operations: Vec<PostOperation>) 
                 match op {
                     PostOperation::Underline(r, c, c_e) => {
                         if *r == row && *c == col {
-                            println!("Underline operation started at row: {}, col: {}", row, col);
                             screen.push_str(underline_begin!().as_str());
                             operation_started = true;
                         } else if operation_started && *r == row && *c_e == col {
-                            println!("Underline operation ended at row: {}, col: {}", row, col);
                             screen.push_str(underline_end!().as_str());
                             operation_started = false;
                         }
                     }
-                    _ => {}
                 }
             }
             

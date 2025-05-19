@@ -2,14 +2,14 @@ use crate::view::actions::Action;
 use crate::view::api_client::get_posts;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_list_item::ViewListItem;
-use crate::view::view_trait::{PostOperation, ViewTrait};
+use crate::view::view_trait::{EventResult, Page, PostOperation, ViewTrait};
 use std::thread;
 use tokio::runtime::Runtime;
 
 #[derive(Clone)]
 pub struct ViewList {
     pub details: ViewDetails,
-    pub items: Vec<Box<dyn ViewTrait>>,
+    pub items: Vec<Box<ViewListItem>>,
     pub selected_index: usize,
 }
 impl ViewList {
@@ -20,7 +20,7 @@ impl ViewList {
                 height: h,
                 row,
                 col,
-                focus: false,
+                focus: true,
                 can_focus: true,
             },
             selected_index: 0,
@@ -45,7 +45,7 @@ impl ViewTrait for ViewList {
                     post["attributes"]["title"].as_str().unwrap().to_string(),
                     count,
                     0,
-                    count == self.selected_index as u32,
+                    post["attributes"]["name"].as_str().unwrap().to_string(),
                 )));
                 // println!("{:?}", post["attributes"]["title"].as_str());
                 count += 1;
@@ -67,22 +67,33 @@ impl ViewTrait for ViewList {
         self.items[self.selected_index].post_operations(Some(details_inhered))
     }
 
-    fn event(&mut self, action: &Action) {
+    fn event(&mut self, action: &Action) -> Option<EventResult> {
         if self.details.focus {
-            match action {
+            return match action {
                 Action::Up => {
                     if (self.selected_index as u32) > 0 {
                         self.selected_index = self.selected_index - 1;
                     }
+                    None
                 }
                 Action::Down => {
                     if self.items.len() > 0 && self.selected_index < self.items.len() - 1 {
                         self.selected_index = self.selected_index + 1;
                     }
+                    None
                 }
-                _ => {}
+                Action::Enter => {
+                    let item_value = self.items[self.selected_index].value.clone();
+                    return Some(EventResult::ChangePage(
+                        Page::Article(item_value),
+                    ));
+                }
+                _ => {
+                    None
+                }
             }
         }
+        None
     }
 
     fn cursor_position(&self, parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {

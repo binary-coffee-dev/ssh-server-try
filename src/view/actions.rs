@@ -8,6 +8,7 @@ pub enum Action {
     Sigint,
     Eof,
     Enter,
+    Esc,
 }
 
 pub fn map_key(key: &[u8]) -> Option<Action> {
@@ -19,6 +20,7 @@ pub fn map_key(key: &[u8]) -> Option<Action> {
         [3] => Some(Action::Sigint),
         [4] => Some(Action::Eof),
         [13] => Some(Action::Enter),
+        [27] => Some(Action::Esc),
         _ => None,
     }
 }
