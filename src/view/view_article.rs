@@ -1,7 +1,7 @@
 use crate::view::actions::Action;
 use crate::view::api_client::get_post_by_name;
 use crate::view::view_details::ViewDetails;
-use crate::view::view_text::ViewText;
+use crate::view::view_text::{TextFormat, ViewText};
 use crate::view::view_trait::{EventResult, Page, ViewTrait};
 use std::thread;
 use tokio::runtime::Runtime;
@@ -34,7 +34,13 @@ impl ViewArticle {
                 focus: false,
                 can_focus: false,
             },
-            items: vec![Box::new(ViewText::new(text, row, col, w, h))],
+            items: vec![Box::new(ViewText::new(
+                TextFormat::Markdown(text),
+                row,
+                col,
+                w,
+                h,
+            ))],
         }
     }
 }
