@@ -55,12 +55,19 @@ impl ViewTrait for ViewArticle {
     fn event(&mut self, action: &Action) -> Option<EventResult> {
         match action {
             Action::Esc | Action::Sigint => Some(EventResult::ChangePage(Page::List)),
-            _ => None,
+            _ => {
+                for child in &mut self.items {
+                    if let Some(result) = child.event(action) {
+                        return Some(result);
+                    }
+                }
+                None
+            }
         }
     }
 
     fn cursor_position(&self, _parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {
-        None
+        Some((self.details.height, self.details.width))
     }
 
     fn redimension(&mut self, width: u32, height: u32) {

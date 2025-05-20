@@ -1,5 +1,6 @@
+use crate::view::actions::Action;
 use crate::view::view_details::ViewDetails;
-use crate::view::view_trait::ViewTrait;
+use crate::view::view_trait::{EventResult, ViewTrait};
 use std::cmp::min;
 
 #[derive(Clone)]
@@ -10,6 +11,7 @@ pub enum TextFormat {
 struct MarkdownDecoder {
     text: Vec<char>,
     position: usize,
+    lines: u32,
 }
 
 impl MarkdownDecoder {
@@ -17,13 +19,12 @@ impl MarkdownDecoder {
         MarkdownDecoder {
             text: text.chars().collect(),
             position: 0,
+            lines: 1,
         }
     }
 
     pub fn decode(&mut self) -> String {
         let mut decoded_text = String::new();
-        let mut in_code_block = false;
-        let mut in_list = false;
 
         while let Some(c) = self.next_char() {
             match c {
@@ -31,8 +32,8 @@ impl MarkdownDecoder {
                 // '*' => {}
                 // '`' => {}
                 _ => {
-                    if in_list && c == '\n' {
-                        in_list = false;
+                    if c == '\n' {
+                        self.lines += 1;
                     }
                     decoded_text.push(c);
                 }
@@ -40,10 +41,6 @@ impl MarkdownDecoder {
         }
 
         decoded_text
-    }
-
-    fn consume_header() -> String {
-        "".to_string()
     }
 
     fn next_char(&mut self) -> Option<char> {
@@ -55,13 +52,23 @@ impl MarkdownDecoder {
             None
         }
     }
+    //
+    // fn current_char(&self) -> Option<char> {
+    //     if self.position < self.text.len() {
+    //         Some(self.text[self.position])
+    //     } else {
+    //         None
+    //     }
+    // }
 }
 
 #[derive(Clone)]
 pub struct ViewText {
     pub details: ViewDetails,
     pub text: TextFormat,
+    pub lines: u32,
     pub decoded_text: String,
+    pub scroll_position: u32,
 }
 
 /// A view that displays text in a given area of the screen. This component support markdown format.
@@ -77,7 +84,9 @@ impl ViewText {
                 can_focus: false,
             },
             text,
+            lines: 0,
             decoded_text: String::new(),
+            scroll_position: 0,
         };
 
         instance.decode_text();
@@ -89,7 +98,9 @@ impl ViewText {
         self.decoded_text = match &self.text {
             TextFormat::Markdown(text) => {
                 let mut decoder = MarkdownDecoder::new(text.clone());
-                decoder.decode()
+                let res = decoder.decode();
+                self.lines = decoder.lines;
+                res
             }
         }
     }
@@ -117,6 +128,16 @@ impl ViewTrait for ViewText {
 
         let text: Vec<char> = self.decoded_text.chars().collect();
         let mut text_it = 0;
+
+        // skip lines
+        let mut scroll = self.scroll_position;
+        while text_it < text.len() && scroll > 0 {
+            if text[text_it] == '\n' {
+                scroll -= 1;
+            }
+            text_it += 1;
+        }
+
         for j in 0..(h - row) {
             if text_it >= text.len() {
                 break;
@@ -144,6 +165,24 @@ impl ViewTrait for ViewText {
                 }
                 screen[j] = line.into_iter().collect();
             }
+        }
+    }
+
+    fn event(&mut self, action: &Action) -> Option<EventResult> {
+        match action {
+            Action::Up => {
+                if self.scroll_position > 0 {
+                    self.scroll_position -= 1;
+                }
+                None
+            }
+            Action::Down => {
+                if self.lines - self.details.height - self.scroll_position > 1 {
+                    self.scroll_position += 1;
+                }
+                None
+            }
+            _ => None,
         }
     }
 }
