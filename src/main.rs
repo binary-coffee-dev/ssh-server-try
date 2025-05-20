@@ -76,21 +76,22 @@ impl Server {
         }
     }
 
-    async fn close_action(&mut self) {
+    async fn close_action(&mut self) -> Result<(), Error> {
         // not needed if we don't want to propagate the message to other clients
         let mut clients = self.clients.lock().await;
         for (id, (channel, ref mut s)) in clients.iter_mut() {
             if *id == self.id {
                 let mut screen = clear_screen!().as_str().to_string();
                 screen.push_str(exit_alt_screen!().as_str());
-                screen.push_str(move_cursor!().as_str());
-                _ = s.data(*channel, CryptoVec::from(screen));
+                let _ = s.data(*channel, screen.into()).await;
+                let _ = s.close(*channel).await;
                 break;
             }
         }
+        Ok(())
     }
 
-    fn draw(
+    async fn draw(
         &mut self,
         channel: ChannelId,
         session: &mut Session,
@@ -103,7 +104,7 @@ impl Server {
         match action {
             Some(act) => match self.view_root.event(&act) {
                 Some(EventResult::Quite) => {
-                    return Err(Error::Disconnect);
+                    return self.close_action().await;
                 }
                 _ => {}
             },
@@ -189,13 +190,9 @@ impl server::Handler for Server {
         _modes: &[(Pty, u32)],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        println!("PTY");
         self.view_root.redimension(col_width, row_height);
-        session.data(
-            channel,
-            CryptoVec::from(enter_alt_screen!().as_bytes().to_vec()),
-        )?;
-        self.draw(channel, session, None)
+        session.data(channel, enter_alt_screen!().into())?;
+        self.draw(channel, session, None).await
     }
 
     async fn window_change_request(
@@ -208,7 +205,7 @@ impl server::Handler for Server {
         session: &mut Session,
     ) -> Result<(), Self::Error> {
         self.view_root.redimension(col_width, row_height);
-        self.draw(channel, session, None)
+        self.draw(channel, session, None).await
     }
 
     async fn data(
@@ -217,17 +214,17 @@ impl server::Handler for Server {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        println!("Data received: {:?}", data);
+        // println!("Data received: {:?}", data);
 
         let action = map_key(data);
         match action {
             Some(Action::Eof) => {
-                return Err(Error::Disconnect);
+                return self.close_action().await;
             }
             _ => {}
         }
 
-        self.draw(channel, session, action)
+        self.draw(channel, session, action).await
     }
 }
 
