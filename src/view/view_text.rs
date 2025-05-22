@@ -1,7 +1,10 @@
+use std::cmp::{max, min};
+
+use unicode_width::UnicodeWidthChar;
+
 use crate::view::actions::Action;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_trait::{EventResult, ViewTrait};
-use std::cmp::min;
 
 #[derive(Clone)]
 pub enum TextFormat {
@@ -150,7 +153,9 @@ impl ViewTrait for ViewText {
                     min(pcol + pw, line.len()),
                 );
 
-                for i in 0..(w - col) {
+                let mut char_offset = 0;
+                let mut i = 0;
+                while i < w - col - char_offset {
                     if text_it >= text.len() {
                         break;
                     }
@@ -160,7 +165,18 @@ impl ViewTrait for ViewText {
                         break;
                     }
 
-                    line[col + i] = text[text_it];
+                    println!(
+                        "char: {} {}",
+                        text[text_it],
+                        text[text_it].width().unwrap_or(1)
+                    );
+                    let cw = text[text_it].width().unwrap();
+                    if (cw > 0) {
+                        char_offset += cw - 1;
+
+                        line[col + i] = text[text_it];
+                        i += 1;
+                    }
                     text_it += 1;
                 }
                 screen[j] = line.into_iter().collect();
@@ -184,5 +200,10 @@ impl ViewTrait for ViewText {
             }
             _ => None,
         }
+    }
+
+    fn redimension(&mut self, width: u32, height: u32) {
+        self.details.width = width;
+        self.details.height = height;
     }
 }

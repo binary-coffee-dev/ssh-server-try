@@ -73,5 +73,9 @@ impl ViewTrait for ViewArticle {
     fn redimension(&mut self, width: u32, height: u32) {
         self.details.width = width;
         self.details.height = height;
+        
+        for child in &mut self.items {
+            child.redimension(width, height);
+        }
     }
 }
