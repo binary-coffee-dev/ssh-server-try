@@ -190,8 +190,8 @@ impl server::Handler for Server {
         _modes: &[(Pty, u32)],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
-        self.view_root.redimension(col_width, row_height);
         session.data(channel, enter_alt_screen!().into())?;
+        self.view_root.redimension(col_width, row_height);
         self.draw(channel, session, None).await
     }
 

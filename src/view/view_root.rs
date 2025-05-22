@@ -13,10 +13,10 @@ pub struct ViewRoot {
 impl ViewRoot {
     pub fn new() -> Self {
         ViewRoot {
-            current_view: Box::new(ViewList::new(0, 0, 80, 24)),
+            current_view: Box::new(ViewList::new(0, 0, 1, 1)),
             details: ViewDetails {
-                width: 80,
-                height: 24,
+                width: 1,
+                height: 1,
                 row: 0,
                 col: 0,
                 focus: false,
@@ -37,7 +37,13 @@ impl ViewRoot {
                 ));
             }
             Page::List => {
-                self.current_view = Box::new(ViewList::new(0, 0, 80, 24));
+                self.current_view = Box::new(ViewList::new(
+                    self.details.row,
+                    self.details.col,
+                    self.details.width,
+                    self.details.height,
+                ));
+                self.current_view.redimension(self.details.width, self.details.height);
             }
         }
     }
@@ -55,9 +61,7 @@ impl ViewTrait for ViewRoot {
                 self.change_page(page);
                 None
             }
-            _ => {
-                result
-            }
+            _ => result,
         }
     }
 

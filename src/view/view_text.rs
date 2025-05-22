@@ -1,4 +1,4 @@
-use std::cmp::{max, min};
+use std::cmp::min;
 
 use unicode_width::UnicodeWidthChar;
 
@@ -9,6 +9,7 @@ use crate::view::view_trait::{EventResult, ViewTrait};
 #[derive(Clone)]
 pub enum TextFormat {
     Markdown(String),
+    PlainText(String),
 }
 
 struct MarkdownDecoder {
@@ -105,18 +106,27 @@ impl ViewText {
                 self.lines = decoder.lines;
                 res
             }
+            TextFormat::PlainText(text) => {
+                self.lines = text.lines().count() as u32;
+                text.clone()
+            }
         }
     }
 }
 
 impl ViewTrait for ViewText {
     fn draw(&mut self, screen: &mut Vec<String>, parent_details: Option<ViewDetails>) {
-        let row = self.details.row as usize + parent_details.clone().map_or(0, |d| d.row as usize);
-        let col = self.details.col as usize + parent_details.clone().map_or(0, |d| d.col as usize);
+        let row_in_screen =
+            self.details.row as usize + parent_details.clone().map_or(0, |d| d.row as usize);
+        let col_in_screen =
+            self.details.col as usize + parent_details.clone().map_or(0, |d| d.col as usize);
 
         let pcol = parent_details
             .clone()
-            .map_or(self.details.col as usize, |d| d.col as usize);
+            .map_or(col_in_screen, |d| d.col as usize);
+        let prow = parent_details
+            .clone()
+            .map_or(row_in_screen as usize, |d| d.row as usize);
         let pw = parent_details
             .clone()
             .map_or(self.details.width as usize, |d| d.width as usize);
@@ -125,14 +135,14 @@ impl ViewTrait for ViewText {
             .map_or(self.details.height as usize, |d| d.height as usize);
 
         let h = min(
-            row + self.details.height as usize,
-            min(pcol + ph, screen.len()),
+            row_in_screen + self.details.height as usize,
+            min(prow + ph, screen.len()),
         );
 
         let text: Vec<char> = self.decoded_text.chars().collect();
         let mut text_it = 0;
 
-        // skip lines
+        // skip lines to scroll
         let mut scroll = self.scroll_position;
         while text_it < text.len() && scroll > 0 {
             if text[text_it] == '\n' {
@@ -141,21 +151,21 @@ impl ViewTrait for ViewText {
             text_it += 1;
         }
 
-        for j in 0..(h - row) {
+        for j in row_in_screen..h {
             if text_it >= text.len() {
                 break;
             }
 
-            if j < screen.len() && col < screen[j].chars().count() {
+            if j < screen.len() && col_in_screen < screen[j].chars().count() {
                 let mut line: Vec<char> = screen[j].chars().collect();
                 let w = min(
-                    col + self.details.width as usize,
+                    col_in_screen + self.details.width as usize,
                     min(pcol + pw, line.len()),
                 );
 
                 let mut char_offset = 0;
                 let mut i = 0;
-                while i < w - col - char_offset {
+                while i < w - col_in_screen - char_offset {
                     if text_it >= text.len() {
                         break;
                     }
@@ -165,16 +175,11 @@ impl ViewTrait for ViewText {
                         break;
                     }
 
-                    println!(
-                        "char: {} {}",
-                        text[text_it],
-                        text[text_it].width().unwrap_or(1)
-                    );
                     let cw = text[text_it].width().unwrap();
-                    if (cw > 0) {
+                    if cw > 0 {
                         char_offset += cw - 1;
 
-                        line[col + i] = text[text_it];
+                        line[col_in_screen + i] = text[text_it];
                         i += 1;
                     }
                     text_it += 1;

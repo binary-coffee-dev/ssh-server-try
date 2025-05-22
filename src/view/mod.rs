@@ -7,6 +7,7 @@ pub mod actions;
 mod api_client;
 pub mod view_article;
 pub mod view_details;
+pub mod view_footer;
 pub mod view_list;
 pub mod view_list_item;
 pub mod view_root;

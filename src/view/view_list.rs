@@ -1,6 +1,7 @@
 use crate::view::actions::Action;
 use crate::view::api_client::get_posts;
 use crate::view::view_details::ViewDetails;
+use crate::view::view_footer::ViewFooter;
 use crate::view::view_list_item::ViewListItem;
 use crate::view::view_trait::{EventResult, Page, PostOperation, ViewTrait};
 use std::thread;
@@ -10,6 +11,7 @@ use tokio::runtime::Runtime;
 pub struct ViewList {
     pub details: ViewDetails,
     pub items: Vec<Box<ViewListItem>>,
+    pub children: Vec<Box<dyn ViewTrait>>,
     pub selected_index: usize,
 }
 impl ViewList {
@@ -23,6 +25,7 @@ impl ViewList {
                 focus: true,
                 can_focus: true,
             },
+            children: vec![Box::new(ViewFooter::new(h - 1, w))],
             selected_index: 0,
             items: vec![],
         }
@@ -55,6 +58,9 @@ impl ViewTrait for ViewList {
         for child in &mut self.items {
             child.draw(screen, Some(self.details.clone()));
         }
+        for child in &mut self.children {
+            child.draw(screen, Some(self.details.clone()));
+        }
     }
 
     fn post_operations(&mut self, parent_details: Option<ViewDetails>) -> Vec<PostOperation> {
@@ -84,17 +90,13 @@ impl ViewTrait for ViewList {
                 }
                 Action::Enter => {
                     let item_value = self.items[self.selected_index].value.clone();
-                    return Some(EventResult::ChangePage(
-                        Page::Article(item_value),
-                    ));
+                    return Some(EventResult::ChangePage(Page::Article(item_value)));
                 }
                 Action::Esc | Action::Sigint => {
                     return Some(EventResult::Quite);
                 }
-                _ => {
-                    None
-                }
-            }
+                _ => None,
+            };
         }
         None
     }
@@ -110,5 +112,9 @@ impl ViewTrait for ViewList {
     fn redimension(&mut self, width: u32, height: u32) {
         self.details.width = width;
         self.details.height = height;
+
+        for child in &mut self.children {
+            child.redimension(width, height);
+        }
     }
 }
