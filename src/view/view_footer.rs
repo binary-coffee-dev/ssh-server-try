@@ -42,10 +42,11 @@ impl ViewTrait for ViewFooter {
             child_displacement += child.details.width;
         }
         for child in &mut self.children {
-            if width  < child_displacement + 2 * (child_amount as u32 - 1) {
+            let separator = 1;
+            if width  < child_displacement + separator * (child_amount as u32 - 1) {
                 break;
             }
-            child.details.col = width - (child_displacement + 2 * (child_amount as u32 - 1));
+            child.details.col = width - (child_displacement + separator * (child_amount as u32 - 1));
             child_displacement -= child.details.width;
             child_amount -= 1;
         }

@@ -2,13 +2,13 @@ use reqwest::Error;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
-pub async fn get_posts() -> Result<Value, Error> {
+pub async fn get_posts(page: u32) -> Result<Value, Error> {
     let client = reqwest::Client::new();
 
     let mut map = HashMap::new();
     map.insert("query", json!(r#"
-    query ($limit: Int!, $start: Int!, $filters: PostFiltersInput!, $sort: [String], $state: PublicationState!) {
-        posts( filters: $filters pagination: {limit: $limit, start: $start} sort: $sort publicationState: $state ) {
+    query ($pageSize: Int!, $page: Int!, $filters: PostFiltersInput!, $sort: [String], $state: PublicationState!) {
+        posts( filters: $filters pagination: {page: $page, pageSize: $pageSize} sort: $sort publicationState: $state ) {
             data {
                 id attributes {
                     title
@@ -39,6 +39,8 @@ pub async fn get_posts() -> Result<Value, Error> {
             meta {
                 pagination {
                     total
+                    page
+                    pageCount
                 }
             }
         }
@@ -46,8 +48,8 @@ pub async fn get_posts() -> Result<Value, Error> {
     map.insert(
         "variables",
         json!({
-            "limit": 12,
-            "start": 0,
+            "pageSize": 12,
+            "page": page,
             "state": "LIVE",
             "sort": ["publishedAt:desc"],
             "filters": {

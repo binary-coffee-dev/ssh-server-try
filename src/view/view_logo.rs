@@ -11,18 +11,19 @@ pub struct ViewLogo {
 
 impl ViewLogo {
     pub fn new(row: u32, col: u32) -> Self {
-        let binary_logo_text = r#"______ _                        _____        __  __
-| ___ (_)                      /  __ \      / _|/ _|
-| |_/ /_ _ __   __ _ _ __ _   _| /  \/ ___ | |_| |_ ___  ___
-| ___ \ | '_ \ / _` | '__| | | | |    / _ \|  _|  _/ _ \/ _ \
-| |_/ / | | | | (_| | |  | |_| | \__/\ (_) | | | ||  __/  __/
-\____/|_|_| |_|\__,_|_|   \__, |\____/\___/|_| |_| \___|\___|
+        let binary_logo_text = r#"
+______ _                        _____        __  __               _
+| ___ (_)                      /  __ \      / _|/ _|             | |
+| |_/ /_ _ __   __ _ _ __ _   _| /  \/ ___ | |_| |_ ___  ___   __| | _____   __
+| ___ \ | '_ \ / _` | '__| | | | |    / _ \|  _|  _/ _ \/ _ \ / _` |/ _ \ \ / /
+| |_/ / | | | | (_| | |  | |_| | \__/\ (_) | | | ||  __/  __/| (_| |  __/\ V /
+\____/|_|_| |_|\__,_|_|   \__, |\____/\___/|_| |_| \___|\___(_)__,_|\___| \_/
                            __/ |
                           |___/"#
             .to_string();
-        
+
         let mut logo_text: Vec<Box<ViewListItem>> = vec![];
-        
+
         for (i, line) in binary_logo_text.lines().enumerate() {
             logo_text.push(Box::new(ViewListItem::new(
                 line.to_string(),
@@ -31,11 +32,11 @@ impl ViewLogo {
                 "".to_string(),
             )));
         }
-        
+
         ViewLogo {
             details: ViewDetails {
-                width: 62,
-                height: 10,
+                width: 80,
+                height: 11,
                 row,
                 col,
                 focus: false,
