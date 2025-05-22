@@ -1,12 +1,12 @@
 use crate::view::view_details::ViewDetails;
-use crate::view::view_text::{TextFormat, ViewText};
+use crate::view::view_list_item::ViewListItem;
 use crate::view::view_trait::ViewType::Logo;
 use crate::view::view_trait::{ViewTrait, ViewType};
 
 #[derive(Clone)]
 pub struct ViewLogo {
     pub details: ViewDetails,
-    logo: ViewText,
+    logo_text: Vec<Box<ViewListItem>>,
 }
 
 impl ViewLogo {
@@ -20,6 +20,18 @@ impl ViewLogo {
                            __/ |
                           |___/"#
             .to_string();
+        
+        let mut logo_text: Vec<Box<ViewListItem>> = vec![];
+        
+        for (i, line) in binary_logo_text.lines().enumerate() {
+            logo_text.push(Box::new(ViewListItem::new(
+                line.to_string(),
+                row + i as u32,
+                col,
+                "".to_string(),
+            )));
+        }
+        
         ViewLogo {
             details: ViewDetails {
                 width: 62,
@@ -29,14 +41,16 @@ impl ViewLogo {
                 focus: false,
                 can_focus: false,
             },
-            logo: ViewText::new(TextFormat::PlainText(binary_logo_text), 0, 0, 62, 8),
+            logo_text,
         }
     }
 }
 
 impl ViewTrait for ViewLogo {
     fn draw(&mut self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
-        self.logo.draw(screen, Some(self.details.clone()));
+        for text in &mut self.logo_text {
+            text.draw(screen, Some(self.details.clone()));
+        }
     }
 
     fn redimension(&mut self, width: u32, _height: u32) {
