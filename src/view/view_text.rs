@@ -4,7 +4,7 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::view::actions::Action;
 use crate::view::view_details::ViewDetails;
-use crate::view::view_trait::{EventResult, ViewTrait};
+use crate::view::view_trait::{EventResult, ViewTrait, ViewType};
 
 #[derive(Clone)]
 pub enum TextFormat {
@@ -198,7 +198,7 @@ impl ViewTrait for ViewText {
                 None
             }
             Action::Down => {
-                if self.lines - self.details.height - self.scroll_position > 1 {
+                if self.lines > 1 + self.details.height + self.scroll_position {
                     self.scroll_position += 1;
                 }
                 None
@@ -210,5 +210,9 @@ impl ViewTrait for ViewText {
     fn redimension(&mut self, width: u32, height: u32) {
         self.details.width = width;
         self.details.height = height;
+    }
+
+    fn view_type(&self) -> ViewType {
+        ViewType::Text
     }
 }

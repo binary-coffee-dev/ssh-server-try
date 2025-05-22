@@ -1,6 +1,7 @@
 use crate::view::view_details::ViewDetails;
-use crate::view::view_text::{TextFormat, ViewText};
-use crate::view::view_trait::ViewTrait;
+use crate::view::view_text::ViewText;
+use crate::view::view_trait::ViewType::Footer;
+use crate::view::view_trait::{ViewTrait, ViewType};
 
 #[derive(Clone)]
 pub struct ViewFooter {
@@ -9,7 +10,7 @@ pub struct ViewFooter {
 }
 
 impl ViewFooter {
-    pub fn new(row: u32, w: u32) -> Self {
+    pub fn new(row: u32, w: u32, indications: Vec<Box<ViewText>>) -> Self {
         ViewFooter {
             details: ViewDetails {
                 width: w,
@@ -19,48 +20,13 @@ impl ViewFooter {
                 focus: false,
                 can_focus: false,
             },
-            children: vec![
-                Box::new(ViewText::new(
-                    TextFormat::PlainText("↑ (k)".to_string()),
-                    0,
-                    0,
-                    5,
-                    1,
-                )),
-                Box::new(ViewText::new(
-                    TextFormat::PlainText("↓ (j)".to_string()),
-                    0,
-                    0,
-                    5,
-                    1,
-                )),
-                Box::new(ViewText::new(
-                    TextFormat::PlainText("Quit (C+d)".to_string()),
-                    0,
-                    0,
-                    10,
-                    1,
-                )),
-                Box::new(ViewText::new(
-                    TextFormat::PlainText("Open (enter)".to_string()),
-                    0,
-                    0,
-                    12,
-                    1,
-                )),
-            ],
+            children: indications,
         }
     }
 }
 
 impl ViewTrait for ViewFooter {
     fn draw(&mut self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
-        // let mut line: Vec<char> = screen[self.details.row as usize].chars().collect();
-        // for i in 0..self.details.width {
-            // line[i as usize] = '#';
-        // }
-        // screen[self.details.row as usize] = line.into_iter().collect();
-
         for child in &mut self.children {
             child.draw(screen, Some(self.details.clone()));
         }
@@ -77,9 +43,12 @@ impl ViewTrait for ViewFooter {
         }
         for child in &mut self.children {
             child.details.col = width - (child_displacement + 2 * (child_amount as u32 - 1));
-            println!("xxx: {}, {}", child_displacement, child.details.width);
             child_displacement -= child.details.width;
             child_amount -= 1;
         }
+    }
+
+    fn view_type(&self) -> ViewType {
+        Footer
     }
 }

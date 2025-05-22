@@ -1,6 +1,6 @@
 use crate::view::view_details::ViewDetails;
 use crate::view::view_trait::PostOperation::Underline;
-use crate::view::view_trait::{PostOperation, ViewTrait};
+use crate::view::view_trait::{PostOperation, ViewTrait, ViewType};
 use std::cmp::min;
 
 #[derive(Clone)]
@@ -61,5 +61,9 @@ impl ViewTrait for ViewListItem {
 
     fn post_operations(&mut self, _parent_details: Option<ViewDetails>) -> Vec<PostOperation> {
         vec![Underline(self.details.row, self.col, self.col_end)]
+    }
+
+    fn view_type(&self) -> ViewType {
+        ViewType::ListItem
     }
 }

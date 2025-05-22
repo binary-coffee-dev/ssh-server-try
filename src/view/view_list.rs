@@ -3,6 +3,7 @@ use crate::view::api_client::get_posts;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_footer::ViewFooter;
 use crate::view::view_list_item::ViewListItem;
+use crate::view::view_text::{TextFormat, ViewText};
 use crate::view::view_trait::{EventResult, Page, PostOperation, ViewTrait};
 use std::thread;
 use tokio::runtime::Runtime;
@@ -25,7 +26,40 @@ impl ViewList {
                 focus: true,
                 can_focus: true,
             },
-            children: vec![Box::new(ViewFooter::new(h - 1, w))],
+            children: vec![Box::new(ViewFooter::new(
+                h - 1,
+                w,
+                vec![
+                    Box::new(ViewText::new(
+                        TextFormat::PlainText("↑ (k)".to_string()),
+                        0,
+                        0,
+                        5,
+                        1,
+                    )),
+                    Box::new(ViewText::new(
+                        TextFormat::PlainText("↓ (j)".to_string()),
+                        0,
+                        0,
+                        5,
+                        1,
+                    )),
+                    Box::new(ViewText::new(
+                        TextFormat::PlainText("Quit (C+d)".to_string()),
+                        0,
+                        0,
+                        10,
+                        1,
+                    )),
+                    Box::new(ViewText::new(
+                        TextFormat::PlainText("Open (enter)".to_string()),
+                        0,
+                        0,
+                        12,
+                        1,
+                    )),
+                ],
+            ))],
             selected_index: 0,
             items: vec![],
         }

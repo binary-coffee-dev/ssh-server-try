@@ -23,6 +23,13 @@ pub enum Page {
     Article(String),
 }
 
+pub enum ViewType {
+    ListItem,
+    Text,
+    Footer,
+    Generic,
+}
+
 pub enum EventResult {
     ChangePage(Page),
     Quite,
@@ -30,7 +37,9 @@ pub enum EventResult {
 
 pub trait ViewTrait: ViewTraitClone + Send {
     fn draw(&mut self, screen: &mut Vec<String>, parent_details: Option<ViewDetails>);
-    fn redimension(&mut self, _width: u32, _height: u32) {
+    fn redimension(&mut self, _width: u32, _height: u32) {}
+    fn view_type(&self) -> ViewType {
+        ViewType::Generic
     }
     fn post_operations(&mut self, _parent_details: Option<ViewDetails>) -> Vec<PostOperation> {
         vec![]

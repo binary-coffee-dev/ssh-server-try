@@ -1,8 +1,9 @@
 use crate::view::actions::Action;
 use crate::view::api_client::get_post_by_name;
 use crate::view::view_details::ViewDetails;
+use crate::view::view_footer::ViewFooter;
 use crate::view::view_text::{TextFormat, ViewText};
-use crate::view::view_trait::{EventResult, Page, ViewTrait};
+use crate::view::view_trait::{EventResult, Page, ViewTrait, ViewType};
 use std::thread;
 use tokio::runtime::Runtime;
 
@@ -34,13 +35,49 @@ impl ViewArticle {
                 focus: false,
                 can_focus: false,
             },
-            items: vec![Box::new(ViewText::new(
-                TextFormat::Markdown(text),
-                row,
-                col,
-                w,
-                h,
-            ))],
+            items: vec![
+                Box::new(ViewText::new(
+                    TextFormat::Markdown(text),
+                    row,
+                    col,
+                    w,
+                    h - 1,
+                )),
+                Box::new(ViewFooter::new(
+                    h - 1,
+                    w,
+                    vec![
+                        Box::new(ViewText::new(
+                            TextFormat::PlainText("↑ (k)".to_string()),
+                            0,
+                            0,
+                            5,
+                            1,
+                        )),
+                        Box::new(ViewText::new(
+                            TextFormat::PlainText("↓ (j)".to_string()),
+                            0,
+                            0,
+                            5,
+                            1,
+                        )),
+                        Box::new(ViewText::new(
+                            TextFormat::PlainText("Quit (C+d)".to_string()),
+                            0,
+                            0,
+                            10,
+                            1,
+                        )),
+                        Box::new(ViewText::new(
+                            TextFormat::PlainText("Back (C+c)".to_string()),
+                            0,
+                            0,
+                            10,
+                            1,
+                        )),
+                    ],
+                )),
+            ],
         }
     }
 }
@@ -73,9 +110,12 @@ impl ViewTrait for ViewArticle {
     fn redimension(&mut self, width: u32, height: u32) {
         self.details.width = width;
         self.details.height = height;
-        
+
         for child in &mut self.items {
-            child.redimension(width, height);
+            match child.view_type() {
+                ViewType::Text => child.redimension(width, height - 1),
+                _ => child.redimension(width, height),
+            }
         }
     }
 }

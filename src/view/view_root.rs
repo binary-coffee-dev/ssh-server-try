@@ -43,9 +43,9 @@ impl ViewRoot {
                     self.details.width,
                     self.details.height,
                 ));
-                self.current_view.redimension(self.details.width, self.details.height);
             }
         }
+        self.current_view.redimension(self.details.width, self.details.height);
     }
 }
 
