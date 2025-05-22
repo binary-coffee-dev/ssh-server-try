@@ -7,3 +7,16 @@ pub struct ViewDetails {
     pub focus: bool,
     pub can_focus: bool,
 }
+
+impl ViewDetails {
+    pub fn default() -> Self {
+        ViewDetails {
+            width: 0,
+            height: 0,
+            row: 0,
+            col: 0,
+            focus: false,
+            can_focus: false,
+        }
+    }
+}

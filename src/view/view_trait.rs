@@ -27,6 +27,7 @@ pub enum ViewType {
     ListItem,
     Text,
     Footer,
+    Logo,
     Generic,
 }
 
@@ -49,6 +50,9 @@ pub trait ViewTrait: ViewTraitClone + Send {
     }
     fn cursor_position(&self, _parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {
         None
+    }
+    fn get_details(&self) -> ViewDetails {
+        ViewDetails::default()
     }
 }
 

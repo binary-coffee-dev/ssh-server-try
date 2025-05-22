@@ -3,8 +3,9 @@ use crate::view::api_client::get_posts;
 use crate::view::view_details::ViewDetails;
 use crate::view::view_footer::ViewFooter;
 use crate::view::view_list_item::ViewListItem;
+use crate::view::view_logo::ViewLogo;
 use crate::view::view_text::{TextFormat, ViewText};
-use crate::view::view_trait::{EventResult, Page, PostOperation, ViewTrait};
+use crate::view::view_trait::{EventResult, Page, PostOperation, ViewTrait, ViewType};
 use std::thread;
 use tokio::runtime::Runtime;
 
@@ -14,6 +15,7 @@ pub struct ViewList {
     pub items: Vec<Box<ViewListItem>>,
     pub children: Vec<Box<dyn ViewTrait>>,
     pub selected_index: usize,
+    pub offset: u32,
 }
 impl ViewList {
     pub fn new(row: u32, col: u32, w: u32, h: u32) -> Self {
@@ -26,48 +28,62 @@ impl ViewList {
                 focus: true,
                 can_focus: true,
             },
-            children: vec![Box::new(ViewFooter::new(
-                h - 1,
-                w,
-                vec![
-                    Box::new(ViewText::new(
-                        TextFormat::PlainText("↑ (k)".to_string()),
-                        0,
-                        0,
-                        5,
-                        1,
-                    )),
-                    Box::new(ViewText::new(
-                        TextFormat::PlainText("↓ (j)".to_string()),
-                        0,
-                        0,
-                        5,
-                        1,
-                    )),
-                    Box::new(ViewText::new(
-                        TextFormat::PlainText("Quit (C+d)".to_string()),
-                        0,
-                        0,
-                        10,
-                        1,
-                    )),
-                    Box::new(ViewText::new(
-                        TextFormat::PlainText("Open (enter)".to_string()),
-                        0,
-                        0,
-                        12,
-                        1,
-                    )),
-                ],
-            ))],
+            children: vec![
+                Box::new(ViewLogo::new(0, 0)),
+                Box::new(ViewFooter::new(
+                    h - 1,
+                    w,
+                    vec![
+                        Box::new(ViewText::new(
+                            TextFormat::PlainText("↑ (k)".to_string()),
+                            0,
+                            0,
+                            5,
+                            1,
+                        )),
+                        Box::new(ViewText::new(
+                            TextFormat::PlainText("↓ (j)".to_string()),
+                            0,
+                            0,
+                            5,
+                            1,
+                        )),
+                        Box::new(ViewText::new(
+                            TextFormat::PlainText("Quit (C+d)".to_string()),
+                            0,
+                            0,
+                            10,
+                            1,
+                        )),
+                        Box::new(ViewText::new(
+                            TextFormat::PlainText("Open (enter)".to_string()),
+                            0,
+                            0,
+                            12,
+                            1,
+                        )),
+                    ],
+                )),
+            ],
             selected_index: 0,
             items: vec![],
+            offset: 0,
         }
     }
 }
 
 impl ViewTrait for ViewList {
     fn draw(&mut self, screen: &mut Vec<String>, _parent_details: Option<ViewDetails>) {
+        for child in &mut self.children {
+            child.draw(screen, Some(self.details.clone()));
+            match child.view_type() {
+                ViewType::Logo => {
+                    self.offset = child.get_details().height;
+                }
+                _ => {}
+            }
+        }
+
         if self.items.is_empty() {
             // load the list of posts from the API
             let handle = thread::spawn(|| {
@@ -80,7 +96,7 @@ impl ViewTrait for ViewList {
             for post in result["data"]["posts"]["data"].as_array().unwrap() {
                 self.items.push(Box::new(ViewListItem::new(
                     post["attributes"]["title"].as_str().unwrap().to_string(),
-                    count,
+                    count + self.offset,
                     0,
                     post["attributes"]["name"].as_str().unwrap().to_string(),
                 )));
@@ -90,9 +106,6 @@ impl ViewTrait for ViewList {
         }
 
         for child in &mut self.items {
-            child.draw(screen, Some(self.details.clone()));
-        }
-        for child in &mut self.children {
             child.draw(screen, Some(self.details.clone()));
         }
     }
@@ -138,7 +151,7 @@ impl ViewTrait for ViewList {
     fn cursor_position(&self, parent_details: Option<ViewDetails>) -> Option<(u32, u32)> {
         let parent_details = parent_details.unwrap();
         Some((
-            self.selected_index as u32 + parent_details.row + 1,
+            self.selected_index as u32 + parent_details.row + 1 + self.offset,
             parent_details.col,
         ))
     }

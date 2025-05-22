@@ -12,6 +12,7 @@ pub mod view_list;
 pub mod view_list_item;
 pub mod view_root;
 pub mod view_text;
+pub mod view_logo;
 pub mod view_trait;
 
 // ANSI escape codes BEGIN
