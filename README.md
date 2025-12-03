@@ -61,6 +61,7 @@ cargo run
 ## ToDo
 
 - [ ] Render markdown into the terminal
+- [ ] Add tests to the project
 
 ## License
 

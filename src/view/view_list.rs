@@ -9,6 +9,8 @@ use crate::view::view_trait::{EventResult, Page, PostOperation, ViewTrait, ViewT
 use std::{thread, vec};
 use tokio::runtime::Runtime;
 
+const GET_POSTS_RETRIES_TIMES: u32 = 5;
+
 #[derive(Clone)]
 pub struct ViewList {
     pub details: ViewDetails,
@@ -102,7 +104,25 @@ impl ViewList {
         self.children.push(footer);
     }
 
-    fn get_posts(&mut self, page: u32) -> Vec<Box<ViewListItem>> {
+    fn get_posts_with_retry(&mut self, page: u32) -> Vec<Box<ViewListItem>> {
+        let mut retries = GET_POSTS_RETRIES_TIMES;
+        loop {
+            match self.get_posts(page) {
+                Ok(result) => {
+                    return result;
+                }
+                Err(err) => {
+                    retries -= 1;
+                    if retries == 0 {
+                        eprintln!("Failed to get posts: {}", err);
+                        return vec![];
+                    }
+                }
+            }
+        }
+    }
+
+    fn get_posts(&mut self, page: u32) -> Result<Vec<Box<ViewListItem>>, String> {
         let handle = thread::spawn(move || {
             let rt = Runtime::new().unwrap();
             rt.block_on(get_posts(page))
@@ -114,21 +134,27 @@ impl ViewList {
 
         self.pages = result["data"]["posts"]["meta"]["pagination"]["pageCount"]
             .as_u64()
-            .unwrap() as u32;
+            .expect("Failed to get page count") as u32;
         self.current_page = result["data"]["posts"]["meta"]["pagination"]["page"]
             .as_u64()
-            .unwrap() as u32;
+            .expect("Failed to get current page") as u32;
         for post in result["data"]["posts"]["data"].as_array().unwrap() {
             items.push(Box::new(ViewListItem::new(
-                post["attributes"]["title"].as_str().unwrap().to_string(),
+                post["attributes"]["title"]
+                    .as_str()
+                    .expect("Failed to get post title")
+                    .to_string(),
                 count + self.offset,
                 0,
-                post["attributes"]["name"].as_str().unwrap().to_string(),
+                post["attributes"]["name"]
+                    .as_str()
+                    .expect("Failed to get post name")
+                    .to_string(),
             )));
             count += 1;
         }
 
-        items
+        Ok(items)
     }
 }
 
@@ -144,7 +170,7 @@ impl ViewTrait for ViewList {
         }
 
         if self.items.is_empty() {
-            self.items = self.get_posts(self.current_page);
+            self.items = self.get_posts_with_retry(self.current_page);
             self.update_indicators();
         }
 
@@ -154,6 +180,15 @@ impl ViewTrait for ViewList {
 
         for child in &mut self.items {
             child.draw(screen, Some(self.details.clone()));
+        }
+    }
+
+    fn redimension(&mut self, width: u32, height: u32) {
+        self.details.width = width;
+        self.details.height = height;
+
+        for child in &mut self.children {
+            child.redimension(width, height);
         }
     }
 
@@ -183,7 +218,7 @@ impl ViewTrait for ViewList {
                 }
                 Action::Left => {
                     if self.current_page > 1 {
-                        self.items = self.get_posts(self.current_page - 1);
+                        self.items = self.get_posts_with_retry(self.current_page - 1);
                         self.selected_index = 0;
                         self.update_indicators();
                     }
@@ -191,7 +226,7 @@ impl ViewTrait for ViewList {
                 }
                 Action::Right => {
                     if self.current_page + 1 < self.pages {
-                        self.items = self.get_posts(self.current_page + 1);
+                        self.items = self.get_posts_with_retry(self.current_page + 1);
                         self.selected_index = 0;
                         self.update_indicators();
                     }
@@ -216,14 +251,5 @@ impl ViewTrait for ViewList {
             self.selected_index as u32 + parent_details.row + 1 + self.offset,
             parent_details.col,
         ))
-    }
-
-    fn redimension(&mut self, width: u32, height: u32) {
-        self.details.width = width;
-        self.details.height = height;
-
-        for child in &mut self.children {
-            child.redimension(width, height);
-        }
     }
 }
